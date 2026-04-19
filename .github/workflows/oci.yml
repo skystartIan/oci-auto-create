@@ -1,0 +1,35 @@
+name: OCI Auto Create Instance
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Try create OCI instance
+        env:
+          OCI_USER: ${{ secrets.OCI_USER }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY: ${{ secrets.OCI_TENANCY }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_KEY: ${{ secrets.OCI_KEY }}
+          OCI_SUBNET_ID: ${{ secrets.OCI_SUBNET_ID }}
+          OCI_IMAGE_ID: ${{ secrets.OCI_IMAGE_ID }}
+        run: |
+          mkdir -p ~/.oci
+          echo "$OCI_KEY" > ~/.oci/key.pem
+          chmod 600 ~/.oci/key.pem
+          pip install oci-cli -q
+          oci compute instance launch \
+            --availability-domain "AD-1" \
+            --compartment-id "$OCI_TENANCY" \
+            --shape "VM.Standard.A1.Flex" \
+            --shape-config '{"ocpus":4,"memoryInGBs":24}' \
+            --subnet-id "$OCI_SUBNET_ID" \
+            --image-id "$OCI_IMAGE_ID" \
+            --assign-public-ip true \
+            --auth api_key \
+            --profile DEFAULT
