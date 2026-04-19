@@ -18,13 +18,10 @@ jobs:
           OCI_KEY: ${{ secrets.OCI_KEY }}
           OCI_SUBNET_ID: ${{ secrets.OCI_SUBNET_ID }}
           OCI_IMAGE_ID: ${{ secrets.OCI_IMAGE_ID }}
+          OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
         run: |
           mkdir -p ~/.oci
           echo "$OCI_KEY" > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem
           printf '[DEFAULT]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=%s\nkey_file=/home/runner/.oci/key.pem\n' "$OCI_USER" "$OCI_FINGERPRINT" "$OCI_TENANCY" "$OCI_REGION" > ~/.oci/config
-          pip install oci-cli -q
-          oci compute instance launch --availability-domain "AD-1" --compartment-id "$OCI_TENANCY" --shape "VM.Standard.A1.Flex" --shape-config '{"ocpus":4,"memoryInGBs":24}' --subnet-id "$OCI_SUBNET_ID" --image-id "$OCI_IMAGE_ID" --assign-public-ip true --display-name "headscaler" --ssh-authorized-keys-file /dev/null --auth api_key --profile DEFAULT --debug 2>&1 | tail -50
-
-
-
+          echo "$
