@@ -2,7 +2,7 @@ name: OCI Auto Create Instance
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -28,4 +28,5 @@ jobs:
           pip install oci-cli -q
           AD=$(oci iam availability-domain list --compartment-id "$OCI_TENANCY" --auth api_key --profile DEFAULT --query 'data[0].name' --raw-output)
           echo "AD name: $AD"
+          sleep 30
           oci compute instance launch --availability-domain "$AD" --compartment-id "$OCI_TENANCY" --shape "VM.Standard.A1.Flex" --shape-config '{"ocpus":4,"memoryInGBs":24}' --subnet-id "$OCI_SUBNET_ID" --image-id "$OCI_IMAGE_ID" --assign-public-ip true --display-name "headscaler" --ssh-authorized-keys-file /tmp/ssh_key.pub --auth api_key --profile DEFAULT
