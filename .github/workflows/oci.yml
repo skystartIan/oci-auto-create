@@ -22,6 +22,14 @@ jobs:
           mkdir -p ~/.oci
           echo "$OCI_KEY" > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem
+          cat > ~/.oci/config << EOF
+[DEFAULT]
+user=$OCI_USER
+fingerprint=$OCI_FINGERPRINT
+tenancy=$OCI_TENANCY
+region=$OCI_REGION
+key_file=/home/runner/.oci/key.pem
+EOF
           pip install oci-cli -q
           oci compute instance launch \
             --availability-domain "AD-1" \
