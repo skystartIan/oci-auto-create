@@ -1,0 +1,68 @@
+name: OCI Create vm-headscale
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Try create vm-headscale
+        env:
+          OCI_USER: ${{ secrets.OCI_USER }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY: ${{ secrets.OCI_TENANCY }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_KEY: ${{ secrets.OCI_KEY }}
+          OCI_SUBNET_ID: ${{ secrets.OCI_SUBNET_ID }}
+          OCI_IMAGE_ID: ${{ secrets.OCI_IMAGE_ID }}
+          OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
+        run: |
+          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
+
+          mkdir -p ~/.oci
+          echo "$OCI_KEY" > ~/.oci/key.pem
+          chmod 600 ~/.oci/key.pem
+          printf '[DEFAULT]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=%s\nkey_file=/home/runner/.oci/key.pem\n' \
+            "$OCI_USER" "$OCI_FINGERPRINT" "$OCI_TENANCY" "$OCI_REGION" > ~/.oci/config
+          printf '%s\n' "$OCI_SSH_KEY" > /tmp/ssh_key.pub
+
+          pip install oci-cli -q
+
+          # 防重複：檢查 vm-headscale 是否已存在
+          for STATE in RUNNING PROVISIONING STARTING; do
+            COUNT=$(oci compute instance list \
+              --compartment-id "$OCI_TENANCY" \
+              --display-name "vm-headscale" \
+              --lifecycle-state "$STATE" \
+              --auth api_key --profile DEFAULT \
+              --query 'length(data)' --raw-output 2>/dev/null || echo "0")
+            if [ "$COUNT" -gt "0" ]; then
+              echo "vm-headscale already exists (state: $STATE), skipping."
+              exit 0
+            fi
+          done
+
+          # 取得 AD
+          AD=$(oci iam availability-domain list \
+            --compartment-id "$OCI_TENANCY" \
+            --auth api_key --profile DEFAULT \
+            --query 'data[0].name' --raw-output)
+          echo "AD: $AD"
+
+          # 嘗試建立 vm-headscale
+          oci compute instance launch \
+            --availability-domain "$AD" \
+            --compartment-id "$OCI_TENANCY" \
+            --shape "VM.Standard.A1.Flex" \
+            --shape-config '{"ocpus":1,"memoryInGBs":6}' \
+            --subnet-id "$OCI_SUBNET_ID" \
+            --image-id "$OCI_IMAGE_ID" \
+            --assign-public-ip true \
+            --display-name "vm-headscale" \
+            --ssh-authorized-keys-file /tmp/ssh_key.pub \
+            --auth api_key --profile DEFAULT
+
+          echo "SUCCESS or Out of capacity, check above."
