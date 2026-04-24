@@ -2,7 +2,7 @@ name: OCI Create vm-windows
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '5-55/10 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -38,7 +38,8 @@ jobs:
               --display-name "vm-windows" \
               --lifecycle-state "$STATE" \
               --auth api_key --profile DEFAULT \
-              --query 'length(data)' --raw-output 2>/dev/null || echo "0")
+              --query 'length(data)' --raw-output 2>/dev/null)
+            COUNT=${COUNT:-0}
             if [ "$COUNT" -gt "0" ]; then
               echo "vm-windows already exists (state: $STATE), skipping."
               exit 0
